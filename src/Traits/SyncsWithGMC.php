@@ -3,6 +3,8 @@
 namespace Manu\GMCIntegration\Traits;
 
 use Manu\GMCIntegration\Services\GMCService;
+use Manu\GMCIntegration\Models\GMCProduct;
+use Manu\GMCIntegration\Models\GMCSyncLog;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -56,6 +58,30 @@ trait SyncsWithGMC
     }
 
     /**
+     * Get or create GMC product record
+     */
+    public function getGMCProduct(): ?GMCProduct
+    {
+        return GMCProduct::where('product_id', $this->getKey())
+            ->where('product_type', get_class($this))
+            ->first();
+    }
+
+    /**
+     * Create or get GMC product record
+     */
+    public function createGMCProduct(): GMCProduct
+    {
+        return GMCProduct::firstOrCreate([
+            'product_id' => $this->getKey(),
+            'product_type' => get_class($this)
+        ], [
+            'sync_enabled' => true,
+            'sync_status' => 'pending'
+        ]);
+    }
+
+    /**
      * Sync product to Google Merchant Center
      */
     public function syncToGMC()
@@ -71,6 +97,15 @@ trait SyncsWithGMC
         Cache::put($cacheKey, true, Carbon::now()->addMinutes(5));
         
         try {
+            $gmcProduct = $this->createGMCProduct();
+            
+            if (!$gmcProduct->isSyncEnabled()) {
+                Log::info("Sync disabled for product {$this->getKey()}");
+                return false;
+            }
+            
+            $gmcProduct->updateSyncStatus('pending');
+            
             $gmcService = app(GMCService::class);
             $result = $gmcService->syncProduct($this);
             
@@ -84,6 +119,11 @@ trait SyncsWithGMC
             
             return $result;
         } catch (\Exception $e) {
+            $gmcProduct = $this->getGMCProduct();
+            if ($gmcProduct) {
+                $gmcProduct->markAsFailed($e->getMessage());
+            }
+            
             Log::error("Failed to sync product {$this->getKey()} to GMC", [
                 'table' => $this->getTable(),
                 'error' => $e->getMessage(),
@@ -162,7 +202,8 @@ trait SyncsWithGMC
      */
     public function isSyncedWithGMC(): bool
     {
-        return !empty($this->getGMCId()) && !empty($this->getGMCLastSync());
+        $gmcProduct = $this->getGMCProduct();
+        return $gmcProduct ? $gmcProduct->isSynced() : false;
     }
 
     /**
@@ -170,11 +211,15 @@ trait SyncsWithGMC
      */
     public function getGMCSyncStatus(): array
     {
+        $gmcProduct = $this->getGMCProduct();
+        
         return [
-            'is_synced' => $this->isSyncedWithGMC(),
-            'gmc_id' => $this->getGMCId(),
-            'last_sync' => $this->getGMCLastSync(),
+            'is_synced' => $gmcProduct ? $gmcProduct->isSynced() : false,
+            'gmc_id' => $gmcProduct ? $gmcProduct->gmc_product_id : null,
+            'last_sync' => $gmcProduct ? $gmcProduct->gmc_last_sync?->toISOString() : null,
             'sync_enabled' => $this->shouldSyncToGMC(),
+            'sync_status' => $gmcProduct ? $gmcProduct->sync_status : 'pending',
+            'last_error' => $gmcProduct ? $gmcProduct->last_error : null,
         ];
     }
 
@@ -184,18 +229,61 @@ trait SyncsWithGMC
      */
     public function shouldSyncToGMC(): bool
     {
-        // Check if model has sync_enabled field
-        if (isset($this->sync_enabled)) {
-            return (bool) $this->sync_enabled;
+        $gmcProduct = $this->getGMCProduct();
+        
+        if ($gmcProduct) {
+            return $gmcProduct->isSyncEnabled();
         }
         
-        // Check if model has gmc_sync_enabled field
-        if (isset($this->gmc_sync_enabled)) {
-            return (bool) $this->gmc_sync_enabled;
-        }
-        
-        // Default to true if no sync control field exists
+        // Default to true if no GMC product record exists
         return true;
+    }
+
+    /**
+     * Enable sync for this product
+     */
+    public function enableGMCSync(): void
+    {
+        $gmcProduct = $this->createGMCProduct();
+        $gmcProduct->update(['sync_enabled' => true]);
+    }
+
+    /**
+     * Disable sync for this product
+     */
+    public function disableGMCSync(): void
+    {
+        $gmcProduct = $this->getGMCProduct();
+        if ($gmcProduct) {
+            $gmcProduct->update(['sync_enabled' => false]);
+        }
+    }
+
+    /**
+     * Get sync logs for this product
+     */
+    public function getGMCSyncLogs()
+    {
+        $gmcProduct = $this->getGMCProduct();
+        return $gmcProduct ? $gmcProduct->syncLogs() : collect();
+    }
+
+    /**
+     * Get last successful sync
+     */
+    public function getLastSuccessfulGMCSync()
+    {
+        $gmcProduct = $this->getGMCProduct();
+        return $gmcProduct ? $gmcProduct->getLastSuccessfulSync() : null;
+    }
+
+    /**
+     * Get last error
+     */
+    public function getLastGMCError()
+    {
+        $gmcProduct = $this->getGMCProduct();
+        return $gmcProduct ? $gmcProduct->getLastError() : null;
     }
 
     /**
@@ -203,15 +291,13 @@ trait SyncsWithGMC
      */
     protected function updateGMCData($result): void
     {
-        $updateData = [
-            'gmc_last_sync' => Carbon::now()
-        ];
-        
-        if (isset($result->id)) {
-            $updateData['gmc_product_id'] = $result->id;
+        $gmcProduct = $this->getGMCProduct();
+        if ($gmcProduct) {
+            $gmcProduct->markAsSynced(
+                $result->id ?? null,
+                $this->prepareGMCData()
+            );
         }
-        
-        $this->update($updateData);
     }
 
     /**
@@ -219,10 +305,14 @@ trait SyncsWithGMC
      */
     protected function clearGMCData(): void
     {
-        $this->update([
-            'gmc_product_id' => null,
-            'gmc_last_sync' => null
-        ]);
+        $gmcProduct = $this->getGMCProduct();
+        if ($gmcProduct) {
+            $gmcProduct->update([
+                'gmc_product_id' => null,
+                'gmc_last_sync' => null,
+                'sync_status' => 'pending'
+            ]);
+        }
     }
 
     // Required method that models must implement
@@ -233,7 +323,8 @@ trait SyncsWithGMC
      */
     public function getGMCId(): ?string
     {
-        return $this->gmc_product_id ?? (string) $this->getKey();
+        $gmcProduct = $this->getGMCProduct();
+        return $gmcProduct ? $gmcProduct->gmc_product_id : null;
     }
 
     /**
@@ -241,7 +332,8 @@ trait SyncsWithGMC
      */
     public function getGMCLastSync(): ?string
     {
-        return $this->gmc_last_sync?->toISOString();
+        $gmcProduct = $this->getGMCProduct();
+        return $gmcProduct ? $gmcProduct->gmc_last_sync?->toISOString() : null;
     }
 
     // Optional methods for conditional syncing

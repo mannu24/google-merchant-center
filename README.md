@@ -1,6 +1,6 @@
 # Google Merchant Center Integration Package
 
-A Laravel package for seamless Google Merchant Center product synchronization with **optional per-product sync control**.
+A Laravel package for seamless Google Merchant Center product synchronization with **independent tables** and **optional per-product sync control**.
 
 ## Installation
 
@@ -15,61 +15,17 @@ composer require manu/gmc-integration
 php artisan vendor:publish --tag=gmc-config
 ```
 
-2. **Create migration for GMC fields:**
+2. **Publish migrations (optional):**
 ```bash
-php artisan make:migration add_gmc_fields_to_products_table
+php artisan vendor:publish --tag=gmc-migrations
 ```
 
-3. **Add the migration content:**
-```php
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    public function up(): void
-    {
-        Schema::table('products', function (Blueprint $table) {
-            // GMC sync control fields
-            $table->boolean('sync_enabled')->default(true)->after('status');
-            
-            // GMC tracking fields
-            $table->string('gmc_product_id')->nullable()->after('sync_enabled');
-            $table->timestamp('gmc_last_sync')->nullable()->after('gmc_product_id');
-            
-            // Indexes for better performance
-            $table->index(['sync_enabled', 'status']);
-            $table->index('gmc_product_id');
-            $table->index('gmc_last_sync');
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropIndex(['sync_enabled', 'status']);
-            $table->dropIndex(['gmc_product_id']);
-            $table->dropIndex(['gmc_last_sync']);
-            
-            $table->dropColumn([
-                'sync_enabled',
-                'gmc_product_id',
-                'gmc_last_sync'
-            ]);
-        });
-    }
-};
-```
-
-4. **Run the migration:**
+3. **Run the migrations:**
 ```bash
 php artisan migrate
 ```
 
-5. **Set environment variables:**
+4. **Set environment variables:**
 ```env
 GMC_MERCHANT_ID=your_merchant_id
 GMC_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
@@ -79,7 +35,7 @@ GMC_BATCH_SIZE=50
 GMC_RETRY_ATTEMPTS=3
 ```
 
-6. **Add trait to your product model:**
+5. **Add trait to your product model:**
 ```php
 use Manu\GMCIntegration\Traits\SyncsWithGMC;
 
@@ -89,8 +45,7 @@ class Product extends Model
     
     protected $fillable = [
         'name', 'description', 'price', 'stock', 'image_url', 
-        'brand', 'sku', 'gmc_product_id', 'gmc_last_sync', 'status',
-        'sync_enabled' // Optional: control sync per product
+        'brand', 'sku', 'status'
     ];
     
     public function prepareGMCData(): array
@@ -110,8 +65,29 @@ class Product extends Model
 }
 ```
 
+## Database Structure
+
+The package creates two independent tables:
+
+### `gmc_products` Table
+- `product_id` - Reference to your product
+- `product_type` - Model class name (e.g., 'App\Models\Product')
+- `sync_enabled` - Control sync per product
+- `gmc_product_id` - GMC's product ID
+- `gmc_last_sync` - Last sync timestamp
+- `sync_status` - Current sync status
+- `last_error` - Last error message
+
+### `gmc_sync_logs` Table
+- Tracks all sync attempts
+- Stores request/response data
+- Performance metrics
+- Error details
+
 ## Features
 
+- ✅ **Independent tables** - No modifications to your existing tables
+- ✅ **Clean model** - All GMC methods are in the trait, keeping your model clean
 - ✅ **Optional per-product sync control** - Enable/disable sync for individual products
 - ✅ **Manual syncing** - Sync products when you want to
 - ✅ **Auto-sync on status change to inactive** - Automatically sync when product becomes inactive
@@ -122,6 +98,7 @@ class Product extends Model
 - ✅ **Rate limiting** to avoid API limits
 - ✅ **Cache protection** against duplicate syncs
 - ✅ **Async processing** for better performance
+- ✅ **Sync history tracking** - Complete audit trail
 
 ## Sync Behavior
 
@@ -142,20 +119,18 @@ $product->syncToGMC();
 
 ## Optional Per-Product Sync Control
 
-### Method 1: Using sync_enabled field
+### Method 1: Using trait methods
 ```php
-// In your migration
-$table->boolean('sync_enabled')->default(true);
+// Enable sync for a product
+$product->enableGMCSync();
 
-// In your model
-protected $fillable = ['sync_enabled', /* other fields */];
+// Disable sync for a product
+$product->disableGMCSync();
 
-// Control sync per product
-$product->sync_enabled = false;
-$product->save(); // Won't sync to GMC even on status change
-
-$product->sync_enabled = true;
-$product->save(); // Will sync to GMC on status change to inactive
+// Check if sync is enabled
+if ($product->shouldSyncToGMC()) {
+    echo "Sync is enabled for this product";
+}
 ```
 
 ### Method 2: Override shouldSyncToGMC()
@@ -189,6 +164,27 @@ $product->update(['status' => 'active']);
 
 // This will NOT automatically sync (no status change)
 $product->update(['price' => 29.99]);
+```
+
+### Working with GMC Data
+```php
+// Get sync status
+$status = $product->getGMCSyncStatus();
+// Returns: ['is_synced' => true, 'gmc_id' => '123', 'last_sync' => '2024-01-01T00:00:00Z', 'sync_enabled' => true, 'sync_status' => 'synced', 'last_error' => null]
+
+// Check if synced
+if ($product->isSyncedWithGMC()) {
+    echo "Product is synced with GMC";
+}
+
+// Get sync logs
+$logs = $product->getGMCSyncLogs();
+
+// Get last successful sync
+$lastSync = $product->getLastSuccessfulGMCSync();
+
+// Get last error
+$lastError = $product->getLastGMCError();
 ```
 
 ### Artisan Commands
@@ -254,10 +250,19 @@ try {
 }
 ```
 
-### Sync Status
+### Sync History
 ```php
-$status = $product->getGMCSyncStatus();
-// Returns: ['is_synced' => true, 'gmc_id' => '123', 'last_sync' => '2024-01-01T00:00:00Z', 'sync_enabled' => true]
+use Manu\GMCIntegration\Models\GMCSyncLog;
+
+// Get all sync logs
+$logs = GMCSyncLog::with('gmcProduct')->latest()->get();
+
+// Get failed syncs
+$failedLogs = GMCSyncLog::where('status', 'failed')->get();
+
+// Get performance metrics
+$avgResponseTime = GMCSyncLog::where('status', 'success')
+    ->avg('response_time_ms');
 ```
 
 ## Performance Optimizations
@@ -267,4 +272,5 @@ $status = $product->getGMCSyncStatus();
 - **Cache protection** against duplicate syncs
 - **Async processing** for better response times
 - **Retry logic** for failed operations
-- **Memory efficient** chunking for bulk operations 
+- **Memory efficient** chunking for bulk operations
+- **Independent tables** - No impact on your existing database performance 

@@ -18,19 +18,12 @@ class Product extends Model
         'stock', 
         'brand', 
         'sku',
-        'gmc_product_id',
-        'gmc_last_sync',
-        'status',
-        'sync_enabled', // Optional: control sync per product
-        'gmc_sync_enabled' // Alternative field name
+        'status'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'stock' => 'integer',
-        'gmc_last_sync' => 'datetime',
-        'sync_enabled' => 'boolean',
-        'gmc_sync_enabled' => 'boolean',
     ];
 
     /**
@@ -58,25 +51,6 @@ class Product extends Model
             'googleProductCategory' => $this->getGoogleProductCategory(),
             'productType' => $this->category ?? 'General',
         ];
-    }
-
-    /**
-     * Override to control sync per product
-     * This makes syncing optional for each product
-     */
-    public function shouldSyncToGMC(): bool
-    {
-        // Check if this specific product should sync
-        if (isset($this->sync_enabled)) {
-            return (bool) $this->sync_enabled;
-        }
-        
-        if (isset($this->gmc_sync_enabled)) {
-            return (bool) $this->gmc_sync_enabled;
-        }
-        
-        // Default to true if no sync control field exists
-        return true;
     }
 
     /**
@@ -144,38 +118,5 @@ class Product extends Model
         // return json_decode($this->additional_images, true) ?? [];
         
         return [];
-    }
-
-    /**
-     * Enable/disable sync for this product
-     */
-    public function enableSync(): void
-    {
-        $this->update(['sync_enabled' => true]);
-    }
-
-    /**
-     * Disable sync for this product
-     */
-    public function disableSync(): void
-    {
-        $this->update(['sync_enabled' => false]);
-    }
-
-    /**
-     * Check if sync is enabled for this product
-     */
-    public function isSyncEnabled(): bool
-    {
-        return $this->shouldSyncToGMC();
-    }
-
-    /**
-     * Manually sync this product to GMC
-     * Use this when you want to sync a product manually
-     */
-    public function syncToGMC(): mixed
-    {
-        return $this->syncwithgmc();
     }
 }
