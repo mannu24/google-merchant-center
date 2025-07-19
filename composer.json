@@ -20,10 +20,10 @@
       "role": "Developer"
     }
   ],
-  "homepage": "https://github.com/yourusername/gmc-integration",
+  "homepage": "https://github.com/mannu24/google-merchant-center",
   "support": {
-    "issues": "https://github.com/yourusername/gmc-integration/issues",
-    "source": "https://github.com/yourusername/gmc-integration"
+    "issues": "https://github.com/mannu24/google-merchant-center/issues",
+    "source": "https://github.com/mannu24/google-merchant-center"
   },
   "minimum-stability": "stable",
   "prefer-stable": true,
