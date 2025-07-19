@@ -1,5 +1,5 @@
 {
-  "name": "manu/gmc-integration",
+  "name": "mannu24/gmc-integration",
   "description": "A comprehensive Laravel package for Google Merchant Center integration with product synchronization, batch processing, and automatic sync management.",
   "type": "library",
   "license": "MIT",
@@ -15,7 +15,7 @@
   ],
   "authors": [
     {
-      "name": "Manu",
+      "name": "Mannu24",
       "email": "contact@example.com",
       "role": "Developer"
     }
@@ -29,12 +29,12 @@
   "prefer-stable": true,
   "autoload": {
     "psr-4": {
-      "Manu\\GMCIntegration\\": "src/"
+      "Mannu24\\GMCIntegration\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Manu\\GMCIntegration\\Tests\\": "tests/"
+      "Mannu24\\GMCIntegration\\Tests\\": "tests/"
     }
   },
   "require": {
@@ -51,7 +51,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "Manu\\GMCIntegration\\Providers\\GMCServiceProvider"
+        "Mannu24\\GMCIntegration\\Providers\\GMCServiceProvider"
       ]
     }
   },

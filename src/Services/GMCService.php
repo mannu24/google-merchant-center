@@ -1,8 +1,8 @@
 <?php
 
-namespace Manu\GMCIntegration\Services;
+namespace Mannu24\GMCIntegration\Services;
 
-use Manu\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
+use Mannu24\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;

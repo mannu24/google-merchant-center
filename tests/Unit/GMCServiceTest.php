@@ -1,9 +1,9 @@
 <?php
 
-namespace Manu\GMCIntegration\Tests\Unit;
+namespace Mannu24\GMCIntegration\Tests\Unit;
 
-use Manu\GMCIntegration\Tests\TestCase;
-use Manu\GMCIntegration\Services\GMCService;
+use Mannu24\GMCIntegration\Tests\TestCase;
+use Mannu24\GMCIntegration\Services\GMCService;
 
 class GMCServiceTest extends TestCase
 {

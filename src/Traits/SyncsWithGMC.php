@@ -1,10 +1,10 @@
 <?php
 
-namespace Manu\GMCIntegration\Traits;
+namespace Mannu24\GMCIntegration\Traits;
 
-use Manu\GMCIntegration\Services\GMCService;
-use Manu\GMCIntegration\Models\GMCProduct;
-use Manu\GMCIntegration\Models\GMCSyncLog;
+use Mannu24\GMCIntegration\Services\GMCService;
+use Mannu24\GMCIntegration\Models\GMCProduct;
+use Mannu24\GMCIntegration\Models\GMCSyncLog;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;

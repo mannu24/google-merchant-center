@@ -1,6 +1,6 @@
 <?php
 
-namespace Manu\GMCIntegration\Repositories\Interfaces;
+namespace Mannu24\GMCIntegration\Repositories\Interfaces;
 
 interface ProductRepositoryInterface
 {

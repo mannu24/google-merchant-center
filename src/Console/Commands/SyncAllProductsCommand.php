@@ -1,11 +1,11 @@
 <?php
 
-namespace Manu\GMCIntegration\Console\Commands;
+namespace Mannu24\GMCIntegration\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
-use Manu\GMCIntegration\Services\GMCService;
-use Manu\GMCIntegration\Traits\SyncsWithGMC;
+use Mannu24\GMCIntegration\Services\GMCService;
+use Mannu24\GMCIntegration\Traits\SyncsWithGMC;
 use Illuminate\Support\Facades\Log;
 
 class SyncAllProductsCommand extends Command

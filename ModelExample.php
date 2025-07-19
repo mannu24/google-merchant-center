@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Manu\GMCIntegration\Traits\SyncsWithGMC;
+use Mannu24\GMCIntegration\Traits\SyncsWithGMC;
 
 class Product extends Model
 {

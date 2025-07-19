@@ -1,9 +1,9 @@
 <?php
 
-namespace Manu\GMCIntegration\Tests;
+namespace Mannu24\GMCIntegration\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
-use Manu\GMCIntegration\Providers\GMCServiceProvider;
+use Mannu24\GMCIntegration\Providers\GMCServiceProvider;
 
 class TestCase extends Orchestra
 {

@@ -1,11 +1,11 @@
 <?php
 
-namespace Manu\GMCIntegration\Providers;
+namespace Mannu24\GMCIntegration\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Manu\GMCIntegration\Repositories\GMCRepository;
-use Manu\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
-use Manu\GMCIntegration\Services\GMCService;
+use Mannu24\GMCIntegration\Repositories\GMCRepository;
+use Mannu24\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
+use Mannu24\GMCIntegration\Services\GMCService;
 
 class GMCServiceProvider extends ServiceProvider
 {
@@ -44,7 +44,7 @@ class GMCServiceProvider extends ServiceProvider
         // Register commands
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \Manu\GMCIntegration\Console\Commands\SyncAllProductsCommand::class,
+                \Mannu24\GMCIntegration\Console\Commands\SyncAllProductsCommand::class,
             ]);
         }
     }

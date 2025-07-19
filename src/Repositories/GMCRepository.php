@@ -1,8 +1,8 @@
 <?php
 
-namespace Manu\GMCIntegration\Repositories;
+namespace Mannu24\GMCIntegration\Repositories;
 
-use Manu\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
+use Mannu24\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
 use Google\Client;
 use Google\Service\ShoppingContent;
 use Illuminate\Support\Facades\Log;
