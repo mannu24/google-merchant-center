@@ -1,16 +1,52 @@
 {
   "name": "manu/gmc-integration",
-  "description": "A Laravel package for Google Merchant Center integration.",
+  "description": "A comprehensive Laravel package for Google Merchant Center integration with product synchronization, batch processing, and automatic sync management.",
   "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "laravel",
+    "google-merchant-center",
+    "gmc",
+    "ecommerce",
+    "product-sync",
+    "google-shopping",
+    "merchant-center",
+    "laravel-package"
+  ],
+  "authors": [
+    {
+      "name": "Manu",
+      "email": "contact@example.com",
+      "role": "Developer"
+    }
+  ],
+  "homepage": "https://github.com/yourusername/gmc-integration",
+  "support": {
+    "issues": "https://github.com/yourusername/gmc-integration/issues",
+    "source": "https://github.com/yourusername/gmc-integration"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
   "autoload": {
     "psr-4": {
       "Manu\\GMCIntegration\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Manu\\GMCIntegration\\Tests\\": "tests/"
+    }
+  },
   "require": {
-    "php": "^8.0",
+    "php": "^8.0|^8.1|^8.2|^8.3",
     "google/apiclient": "^2.15",
-    "illuminate/support": "^8.0|^9.0|^10.0"
+    "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
+    "illuminate/database": "^8.0|^9.0|^10.0|^11.0",
+    "illuminate/console": "^8.0|^9.0|^10.0|^11.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.0|^10.0",
+    "orchestra/testbench": "^6.0|^7.0|^8.0|^9.0"
   },
   "extra": {
     "laravel": {
@@ -18,5 +54,13 @@
         "Manu\\GMCIntegration\\Providers\\GMCServiceProvider"
       ]
     }
+  },
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit",
+    "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
   }
 }
