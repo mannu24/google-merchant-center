@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GMCSyncLog extends Model
 {
+    protected $table = 'gmc_sync_logs';
+    
     protected $fillable = [
         'gmc_product_id',
         'action',
@@ -15,7 +17,7 @@ class GMCSyncLog extends Model
         'request_data',
         'response_data',
         'response_time_ms',
-        'gmc_product_id',
+        'gmc_product_id_gmc', // GMC's actual product ID
     ];
 
     protected $casts = [

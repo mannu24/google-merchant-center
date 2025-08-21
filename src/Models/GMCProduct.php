@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class GMCProduct extends Model
 {
+    protected $table = 'gmc_products';
+    
     protected $fillable = [
         'product_id',
         'product_type',

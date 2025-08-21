@@ -37,13 +37,26 @@ class GMCService
             $gmcData = $this->prepareProductData($model);
             $this->validateProductData($gmcData);
             
-            $result = $this->gmcRepository->uploadProduct($gmcData);
+            // Check if product already exists in GMC
+            $existingGmcId = $model->getGMCId();
             
-            Log::info("Product synced successfully", [
-                'model_id' => $model->getKey(),
-                'table' => $model->getTable(),
-                'gmc_id' => $result->id ?? null
-            ]);
+            if ($existingGmcId) {
+                // Update existing product
+                $result = $this->gmcRepository->updateProduct($existingGmcId, $gmcData);
+                Log::info("Product updated in GMC", [
+                    'model_id' => $model->getKey(),
+                    'table' => $model->getTable(),
+                    'gmc_id' => $existingGmcId
+                ]);
+            } else {
+                // Create new product
+                $result = $this->gmcRepository->uploadProduct($gmcData);
+                Log::info("Product created in GMC", [
+                    'model_id' => $model->getKey(),
+                    'table' => $model->getTable(),
+                    'gmc_id' => $result->id ?? null
+                ]);
+            }
             
             return $result;
         } catch (\Exception $e) {
@@ -115,6 +128,23 @@ class GMCService
             'errors' => $errors,
             'total' => $total
         ];
+    }
+
+    /**
+     * Force update an existing product in GMC
+     */
+    public function forceUpdateProduct($model)
+    {
+        $gmcId = $model->getGMCId();
+        
+        if (!$gmcId) {
+            throw new \InvalidArgumentException("Product is not yet synced with GMC");
+        }
+        
+        $gmcData = $this->prepareProductData($model);
+        $this->validateProductData($gmcData);
+        
+        return $this->gmcRepository->updateProduct($gmcId, $gmcData);
     }
 
     /**

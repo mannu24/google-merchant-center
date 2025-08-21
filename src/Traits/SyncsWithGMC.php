@@ -157,6 +157,28 @@ trait SyncsWithGMC
     }
 
     /**
+     * Force update existing product in GMC (must already be synced)
+     */
+    public function forceUpdateInGMC()
+    {
+        try {
+            $gmcService = app(GMCService::class);
+            return $gmcService->forceUpdateProduct($this);
+        } catch (\Exception $e) {
+            Log::error("Failed to force update product {$this->getKey()} in GMC", [
+                'table' => $this->getTable(),
+                'error' => $e->getMessage()
+            ]);
+            
+            if (Config::get('gmc.throw_sync_exceptions', false)) {
+                throw $e;
+            }
+            
+            return false;
+        }
+    }
+
+    /**
      * Delete product from Google Merchant Center
      */
     public function deleteFromGMC()
