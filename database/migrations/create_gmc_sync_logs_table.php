@@ -28,7 +28,7 @@ return new class extends Migration
             
             // Performance metrics
             $table->integer('response_time_ms')->nullable();
-            $table->string('gmc_product_id')->nullable(); // GMC's product ID
+            $table->string('gmc_product_id_gmc')->nullable(); // GMC's actual product ID
             
             // Timestamps
             $table->timestamps();
