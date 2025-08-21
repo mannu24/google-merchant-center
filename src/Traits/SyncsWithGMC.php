@@ -17,25 +17,30 @@ trait SyncsWithGMC
      */
     public static function bootSyncsWithGMC()
     {
-        // Remove automatic sync on create
-        // static::created(function ($model) { ... });
+        // Enable automatic sync on create
+        static::created(function ($model) {
+            if (!$model->shouldSyncToGMC()) {
+                return;
+            }
+            
+            if (Config::get('gmc.auto_sync_enabled', true)) {
+                dispatch(function () use ($model) {
+                    $model->syncToGMC();
+                })->afterResponse();
+            }
+        });
 
-        // Remove automatic sync on update
-        // static::updated(function ($model) { ... });
-
-        // Only sync on status change to inactive
+        // Enable automatic sync on update
         static::updated(function ($model) {
             if (!$model->shouldSyncToGMC()) {
                 return;
             }
             
-            // Check if status changed to inactive
-            if ($model->wasChanged('status') && $model->status === 'inactive') {
-                if (Config::get('gmc.auto_sync_enabled', true)) {
-                    dispatch(function () use ($model) {
-                        $model->syncToGMC();
-                    })->afterResponse();
-                }
+            // Sync on any update, not just status change
+            if (Config::get('gmc.auto_sync_enabled', true)) {
+                dispatch(function () use ($model) {
+                    $model->syncToGMC();
+                })->afterResponse();
             }
         });
 
@@ -130,7 +135,7 @@ trait SyncsWithGMC
                 'trace' => $e->getTraceAsString()
             ]);
             
-            if (Config::get('gmc.throw_sync_exceptions', false)) {
+            if (Config::get('gmc.throw_sync_exceptions', true)) {
                 throw $e;
             }
             
@@ -170,7 +175,7 @@ trait SyncsWithGMC
                 'error' => $e->getMessage()
             ]);
             
-            if (Config::get('gmc.throw_sync_exceptions', false)) {
+            if (Config::get('gmc.throw_sync_exceptions', true)) {
                 throw $e;
             }
             
@@ -206,12 +211,12 @@ trait SyncsWithGMC
             
             return true;
         } catch (\Exception $e) {
-            Log::error("Failed to delete product {$this->getKey()} from GMC", [
+            Log::error("Failed to delete product {$this->getKey()} in GMC", [
                 'table' => $this->getTable(),
                 'error' => $e->getMessage()
             ]);
             
-            if (Config::get('gmc.throw_sync_exceptions', false)) {
+            if (Config::get('gmc.throw_sync_exceptions', true)) {
                 throw $e;
             }
             
