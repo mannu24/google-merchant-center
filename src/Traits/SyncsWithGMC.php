@@ -6,47 +6,34 @@ use Mannu24\GMCIntegration\Services\GMCService;
 use Mannu24\GMCIntegration\Models\GMCProduct;
 use Mannu24\GMCIntegration\Models\GMCSyncLog;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Carbon;
 
 trait SyncsWithGMC
 {
-    /**
-     * Boot the trait and register model events
-     */
     public static function bootSyncsWithGMC()
     {
-        // Enable automatic sync on create
         static::created(function ($model) {
-            if (!$model->shouldSyncToGMC()) {
+            if (!$model->shouldSyncToGMC() || !Config::get('gmc.auto_sync_enabled', true)) {
                 return;
             }
             
-            if (Config::get('gmc.auto_sync_enabled', true)) {
-                dispatch(function () use ($model) {
-                    $model->syncToGMC();
-                })->afterResponse();
-            }
+            dispatch(function () use ($model) {
+                $model->syncToGMC();
+            })->afterResponse();
         });
 
-        // Enable automatic sync on update
         static::updated(function ($model) {
-            if (!$model->shouldSyncToGMC()) {
+            if (!$model->shouldSyncToGMC() || !Config::get('gmc.auto_sync_enabled', true)) {
                 return;
             }
             
-            // Sync on any update, not just status change
-            if (Config::get('gmc.auto_sync_enabled', true)) {
-                dispatch(function () use ($model) {
-                    $model->syncToGMC();
-                })->afterResponse();
-            }
+            dispatch(function () use ($model) {
+                $model->syncToGMC();
+            })->afterResponse();
         });
 
-        // Keep automatic sync on delete
         static::deleted(function ($model) {
-            if (!$model->shouldSyncToGMC()) {
+            if (!$model->shouldSyncToGMC() || !Config::get('gmc.auto_sync_enabled', true)) {
                 return;
             }
             
@@ -54,17 +41,12 @@ trait SyncsWithGMC
                 return;
             }
             
-            if (Config::get('gmc.auto_sync_enabled', true)) {
-                dispatch(function () use ($model) {
-                    $model->deleteFromGMC();
-                })->afterResponse();
-            }
+            dispatch(function () use ($model) {
+                $model->deleteFromGMC();
+            })->afterResponse();
         });
     }
 
-    /**
-     * Get or create GMC product record
-     */
     public function getGMCProduct(): ?GMCProduct
     {
         return GMCProduct::where('product_id', $this->getKey())
@@ -72,9 +54,6 @@ trait SyncsWithGMC
             ->first();
     }
 
-    /**
-     * Create or get GMC product record
-     */
     public function createGMCProduct(): GMCProduct
     {
         return GMCProduct::firstOrCreate([
@@ -86,46 +65,21 @@ trait SyncsWithGMC
         ]);
     }
 
-    /**
-     * Sync product to Google Merchant Center
-     */
     public function syncToGMC()
     {
-        $cacheKey = "gmc_sync_{$this->getTable()}_{$this->getKey()}";
-        
-        // Prevent duplicate syncs within 5 minutes
-        if (Cache::has($cacheKey)) {
-            Log::info("Skipping duplicate sync for {$this->getTable()} ID {$this->getKey()}");
-            return false;
-        }
-        
-        Cache::put($cacheKey, true, Carbon::now()->addMinutes(5));
-        
         try {
             $gmcProduct = $this->createGMCProduct();
             
             if (!$gmcProduct->isSyncEnabled()) {
-                Log::info("Sync disabled for product {$this->getKey()}");
                 return false;
             }
             
             $gmcProduct->updateSyncStatus('pending');
             
-            Log::info("Starting GMC sync for product", [
-                'product_id' => $this->getKey(),
-                'table' => $this->getTable()
-            ]);
-            
             $gmcService = app(GMCService::class);
             $result = $gmcService->syncProduct($this);
             
-            // Update sync timestamp and GMC ID
             $this->updateGMCData($result);
-            
-            Log::info("Product {$this->getKey()} successfully synced to GMC", [
-                'table' => $this->getTable(),
-                'gmc_id' => $result->id ?? null
-            ]);
             
             return $result;
         } catch (\Exception $e) {
@@ -134,71 +88,37 @@ trait SyncsWithGMC
                 $gmcProduct->markAsFailed($e->getMessage());
             }
             
-            Log::error("Failed to sync product {$this->getKey()} to GMC", [
-                'table' => $this->getTable(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'exception_class' => get_class($e)
-            ]);
-            
-            Log::info("About to throw exception", [
-                'throw_sync_exceptions' => Config::get('gmc.throw_sync_exceptions', true),
-                'will_throw' => Config::get('gmc.throw_sync_exceptions', true)
-            ]);
-            
             if (Config::get('gmc.throw_sync_exceptions', true)) {
-                Log::info("Throwing exception as configured");
                 throw $e;
             }
             
-            Log::info("Not throwing exception, returning false");
             return false;
-        } finally {
-            Cache::forget($cacheKey);
         }
     }
 
-    /**
-     * Laravel-style method to sync current model instance with GMC
-     */
     public function syncwithgmc()
     {
         return $this->syncToGMC();
     }
 
-    /**
-     * Force sync regardless of auto_sync setting
-     */
     public function forceSyncToGMC()
     {
         return $this->syncToGMC();
     }
 
-    /**
-     * Force update existing product in GMC (must already be synced)
-     */
     public function forceUpdateInGMC()
     {
         try {
             $gmcService = app(GMCService::class);
             return $gmcService->forceUpdateProduct($this);
         } catch (\Exception $e) {
-            Log::error("Failed to force update product {$this->getKey()} in GMC", [
-                'table' => $this->getTable(),
-                'error' => $e->getMessage()
-            ]);
-            
             if (Config::get('gmc.throw_sync_exceptions', true)) {
                 throw $e;
             }
-            
             return false;
         }
     }
 
-    /**
-     * Delete product from Google Merchant Center
-     */
     public function deleteFromGMC()
     {
         try {
@@ -206,49 +126,27 @@ trait SyncsWithGMC
             $productId = $this->getGMCId();
             
             if (!$productId) {
-                Log::warning("No GMC product ID found for model {$this->getKey()}", [
-                    'table' => $this->getTable()
-                ]);
                 return false;
             }
             
             $gmcService->deleteProduct($productId);
-            
-            // Clear GMC data after successful deletion
             $this->clearGMCData();
-            
-            Log::info("Product {$this->getKey()} successfully deleted from GMC", [
-                'table' => $this->getTable(),
-                'gmc_id' => $productId
-            ]);
             
             return true;
         } catch (\Exception $e) {
-            Log::error("Failed to delete product {$this->getKey()} in GMC", [
-                'table' => $this->getTable(),
-                'error' => $e->getMessage()
-            ]);
-            
             if (Config::get('gmc.throw_sync_exceptions', true)) {
                 throw $e;
             }
-            
             return false;
         }
     }
 
-    /**
-     * Check if product is synced with GMC
-     */
     public function isSyncedWithGMC(): bool
     {
         $gmcProduct = $this->getGMCProduct();
         return $gmcProduct ? $gmcProduct->isSynced() : false;
     }
 
-    /**
-     * Get the sync status
-     */
     public function getGMCSyncStatus(): array
     {
         $gmcProduct = $this->getGMCProduct();
@@ -263,34 +161,18 @@ trait SyncsWithGMC
         ];
     }
 
-    /**
-     * Check if this specific product should sync to GMC
-     * Override this method to make syncing optional per product
-     */
     public function shouldSyncToGMC(): bool
     {
         $gmcProduct = $this->getGMCProduct();
-        
-        if ($gmcProduct) {
-            return $gmcProduct->isSyncEnabled();
-        }
-        
-        // Default to true if no GMC product record exists
-        return true;
+        return $gmcProduct ? $gmcProduct->isSyncEnabled() : true;
     }
 
-    /**
-     * Enable sync for this product
-     */
     public function enableGMCSync(): void
     {
         $gmcProduct = $this->createGMCProduct();
         $gmcProduct->update(['sync_enabled' => true]);
     }
 
-    /**
-     * Disable sync for this product
-     */
     public function disableGMCSync(): void
     {
         $gmcProduct = $this->getGMCProduct();
@@ -299,36 +181,24 @@ trait SyncsWithGMC
         }
     }
 
-    /**
-     * Get sync logs for this product
-     */
     public function getGMCSyncLogs()
     {
         $gmcProduct = $this->getGMCProduct();
         return $gmcProduct ? $gmcProduct->syncLogs() : collect();
     }
 
-    /**
-     * Get last successful sync
-     */
     public function getLastSuccessfulGMCSync()
     {
         $gmcProduct = $this->getGMCProduct();
         return $gmcProduct ? $gmcProduct->getLastSuccessfulSync() : null;
     }
 
-    /**
-     * Get last error
-     */
     public function getLastGMCError()
     {
         $gmcProduct = $this->getGMCProduct();
         return $gmcProduct ? $gmcProduct->getLastError() : null;
     }
 
-    /**
-     * Update GMC data after successful sync
-     */
     protected function updateGMCData($result): void
     {
         $gmcProduct = $this->getGMCProduct();
@@ -340,9 +210,6 @@ trait SyncsWithGMC
         }
     }
 
-    /**
-     * Clear GMC data after deletion
-     */
     protected function clearGMCData(): void
     {
         $gmcProduct = $this->getGMCProduct();
@@ -355,28 +222,20 @@ trait SyncsWithGMC
         }
     }
 
-    // Required method that models must implement
     abstract public function prepareGMCData(): array;
 
-    /**
-     * Get GMC product ID
-     */
     public function getGMCId(): ?string
     {
         $gmcProduct = $this->getGMCProduct();
         return $gmcProduct ? $gmcProduct->gmc_product_id : null;
     }
 
-    /**
-     * Get last sync timestamp
-     */
     public function getGMCLastSync(): ?string
     {
         $gmcProduct = $this->getGMCProduct();
         return $gmcProduct ? $gmcProduct->gmc_last_sync?->toISOString() : null;
     }
 
-    // Optional methods for conditional syncing
     public function shouldSyncOnCreate(): bool
     {
         return true;

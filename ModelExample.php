@@ -11,32 +11,10 @@ class Product extends Model
     use HasFactory, SyncsWithGMC;
 
     protected $fillable = [
-        'title', 
-        'description', 
-        'price', 
-        'special_price',
-        'special_price_from',
-        'special_price_to',
-        'quantity', 
-        'image_url', 
-        'additional_images',
-        'brand', 
-        'sku',
-        'gtin',
-        'mpn',
-        'url_key',
-        'weight',
-        'length',
-        'width',
-        'height',
-        'color',
-        'sizes',
-        'material',
-        'pattern',
-        'parent_sku',
-        'pack_size',
-        'is_bundle',
-        'status'
+        'title', 'description', 'price', 'special_price', 'special_price_from', 'special_price_to',
+        'quantity', 'image_url', 'additional_images', 'brand', 'sku', 'gtin', 'mpn', 'url_key',
+        'weight', 'length', 'width', 'height', 'color', 'sizes', 'material', 'pattern',
+        'parent_sku', 'pack_size', 'is_bundle', 'status'
     ];
 
     protected $casts = [
@@ -52,10 +30,6 @@ class Product extends Model
         'sizes' => 'array',
     ];
 
-    /**
-     * Required method for GMC integration
-     * This method must return data in Google Merchant Center format
-     */
     public function prepareGMCData(): array
     {
         return [
@@ -75,7 +49,7 @@ class Product extends Model
             'imageLink' => 'main image link',
 
             // ℹ️ OPTIONAL: Up to 10 additional product images
-            'additionalImageLinks' => [], // Array of image links
+            'additionalImageLinks' => [],
 
             // ✅ REQUIRED: Price object
             'price' => [
@@ -108,11 +82,10 @@ class Product extends Model
             'brand' => $this->brand ?? 'Your Brand Name',
 
             // ℹ️ OPTIONAL: Google-defined product category (numeric ID preferred, string accepted)
-            // Example numeric ID: "Apparel & Accessories > Clothing" = 1604
             'googleProductCategory' => 'product category name',
 
             // ℹ️ OPTIONAL: Your own categorization
-            'productTypes' => [], // Array of product types
+            'productTypes' => [],
 
             // ℹ️ OPTIONAL: Sale price if product is discounted
             'salePrice' => ['value' => '0', 'currency' => 'INR'],
@@ -137,7 +110,6 @@ class Product extends Model
                 : null,
 
             // ℹ️ OPTIONAL: Shipping cost (if you want to override GMC settings)
-            // Example: Free shipping in India
             'shipping' => [[
                 'country' => 'IN',
                 'service' => 'Standard',
@@ -171,5 +143,4 @@ class Product extends Model
             'isBundle' => $this->is_bundle ?? false,
         ];
     }
-
 }

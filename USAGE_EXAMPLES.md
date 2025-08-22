@@ -34,7 +34,6 @@ class Product extends Model
         'sizes' => 'array',
     ];
 
-    // Required method - must return GMC-compatible data
     public function prepareGMCData(): array
     {
         return [
@@ -54,7 +53,7 @@ class Product extends Model
             'imageLink' => 'main image link',
 
             // ℹ️ OPTIONAL: Up to 10 additional product images
-            'additionalImageLinks' => [], // Array of image links
+            'additionalImageLinks' => [],
 
             // ✅ REQUIRED: Price object
             'price' => [
@@ -87,11 +86,10 @@ class Product extends Model
             'brand' => $this->brand ?? 'Your Brand Name',
 
             // ℹ️ OPTIONAL: Google-defined product category (numeric ID preferred, string accepted)
-            // Example numeric ID: "Apparel & Accessories > Clothing" = 1604
             'googleProductCategory' => 'product category name',
 
             // ℹ️ OPTIONAL: Your own categorization
-            'productTypes' => [], // Array of product types
+            'productTypes' => [],
 
             // ℹ️ OPTIONAL: Sale price if product is discounted
             'salePrice' => ['value' => '0', 'currency' => 'INR'],
@@ -155,15 +153,12 @@ class Product extends Model
 ## Manual Syncing
 
 ```php
-// Laravel-style method (your preferred approach)
 $product = Product::find(1);
 $result = $product->syncwithgmc();
 
-// Alternative method names
 $product->syncToGMC();
-$product->forceSyncToGMC(); // Ignores auto_sync_enabled setting
+$product->forceSyncToGMC();
 
-// Check sync status
 if ($product->isSyncedWithGMC()) {
     $status = $product->getGMCSyncStatus();
     echo "Last synced: " . $status['last_sync'];
@@ -173,7 +168,6 @@ if ($product->isSyncedWithGMC()) {
 ## Automatic Syncing
 
 ```php
-// These will automatically sync to GMC (if auto_sync_enabled = true)
 $product = Product::create([
     'title' => 'New Product',
     'price' => 29.99,
@@ -181,9 +175,8 @@ $product = Product::create([
     'status' => 'active'
 ]);
 
-$product->update(['price' => 24.99]); // Auto-syncs
-
-$product->delete(); // Auto-removes from GMC
+$product->update(['price' => 24.99]);
+$product->delete();
 ```
 
 ## Conditional Syncing
@@ -193,20 +186,17 @@ class Product extends Model
 {
     use SyncsWithGMC;
     
-    // Only sync published products
     public function shouldSyncOnCreate(): bool
     {
         return $this->status === 'active';
     }
     
-    // Only sync when important fields change
     public function shouldSyncOnUpdate(): bool
     {
         return $this->status === 'active' && 
                $this->isDirty(['title', 'price', 'quantity', 'image_url']);
     }
     
-    // Always allow deletion from GMC
     public function shouldDeleteFromGMC(): bool
     {
         return true;
@@ -220,8 +210,6 @@ class Product extends Model
 use Manu\GMCIntegration\Services\GMCService;
 
 $gmcService = app(GMCService::class);
-
-// Sync multiple products
 $products = Product::where('status', 'active')->get();
 $result = $gmcService->syncMultipleProducts($products);
 
@@ -232,23 +220,15 @@ echo "Errors: " . count($result['errors']);
 ## Artisan Commands
 
 ```bash
-# Sync all products of default model
 php artisan gmc:sync-all
-
-# Sync specific model
 php artisan gmc:sync-all "App\\Models\\Product"
-
-# Force sync (ignores last_sync timestamp)
 php artisan gmc:sync-all --force
-
-# Use smaller chunks for memory efficiency
 php artisan gmc:sync-all --chunk=25
 ```
 
 ## Configuration
 
 ```env
-# .env file
 GMC_MERCHANT_ID=your_merchant_id_here
 GMC_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
 GMC_AUTO_SYNC=true
@@ -263,7 +243,6 @@ GMC_DEFAULT_MODEL="App\\Models\\Product"
 public function prepareGMCData(): array
 {
     return [
-        // ... other fields
         'imageLink' => $this->image_url ?? 'main image url',
         'additionalImageLinks' => $this->additional_images ?? [],
     ];
@@ -275,7 +254,6 @@ public function prepareGMCData(): array
 public function prepareGMCData(): array
 {
     return [
-        // ... other fields
         'googleProductCategory' => $this->category ?? 'General',
         'productTypes' => [$this->category, $this->subcategory, $this->brand],
     ];
@@ -287,7 +265,6 @@ public function prepareGMCData(): array
 public function prepareGMCData(): array
 {
     return [
-        // ... other fields
         'salePrice' => $this->special_price
             ? ['value' => (string) $this->special_price, 'currency' => 'INR']
             : null,
@@ -303,7 +280,6 @@ public function prepareGMCData(): array
 public function prepareGMCData(): array
 {
     return [
-        // ... other fields
         'shippingWeight' => $this->weight
             ? ['value' => (string) $this->weight, 'unit' => 'kg']
             : null,
@@ -324,7 +300,6 @@ public function prepareGMCData(): array
 public function prepareGMCData(): array
 {
     return [
-        // ... other fields
         'itemGroupId' => $this->parent_sku ?? null,
         'color' => $this->color ?? null,
         'sizes' => $this->sizes ?? null,
@@ -336,7 +311,6 @@ public function prepareGMCData(): array
 
 ### Error Handling
 ```php
-// In controller
 try {
     $product->syncwithgmc();
     return response()->json(['message' => 'Product synced successfully']);
@@ -345,11 +319,10 @@ try {
     return response()->json(['error' => 'Sync failed'], 500);
 }
 
-// Or check return value
 $success = $product->syncwithgmc();
 if ($success) {
     // Handle success
 } else {
-    // Handle failure (error was logged)
+    // Handle failure
 }
 ``` 

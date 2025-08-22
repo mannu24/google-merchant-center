@@ -7,16 +7,13 @@ use Mannu24\GMCIntegration\Services\GMCService;
 
 class GMCServiceTest extends TestCase
 {
-    /** @test */
-    public function it_can_instantiate_gmc_service()
+    public function test_it_can_instantiate_gmc_service()
     {
         $service = $this->app->make(GMCService::class);
-        
         $this->assertInstanceOf(GMCService::class, $service);
     }
     
-    /** @test */
-    public function it_validates_product_data_correctly()
+    public function test_it_validates_product_data_correctly()
     {
         $service = $this->app->make(GMCService::class);
         

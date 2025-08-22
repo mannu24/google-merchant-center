@@ -14,9 +14,7 @@ class TestCase extends Orchestra
 
     protected function getPackageProviders($app)
     {
-        return [
-            GMCServiceProvider::class,
-        ];
+        return [GMCServiceProvider::class];
     }
 
     protected function getEnvironmentSetUp($app)
