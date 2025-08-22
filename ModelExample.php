@@ -11,19 +11,45 @@ class Product extends Model
     use HasFactory, SyncsWithGMC;
 
     protected $fillable = [
-        'name', 
+        'title', 
         'description', 
         'price', 
+        'special_price',
+        'special_price_from',
+        'special_price_to',
+        'quantity', 
         'image_url', 
-        'stock', 
+        'additional_images',
         'brand', 
         'sku',
+        'gtin',
+        'mpn',
+        'url_key',
+        'weight',
+        'length',
+        'width',
+        'height',
+        'color',
+        'sizes',
+        'material',
+        'pattern',
+        'parent_sku',
+        'pack_size',
+        'is_bundle',
         'status'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'stock' => 'integer',
+        'special_price' => 'decimal:2',
+        'quantity' => 'integer',
+        'weight' => 'decimal:2',
+        'length' => 'decimal:2',
+        'width' => 'decimal:2',
+        'height' => 'decimal:2',
+        'is_bundle' => 'boolean',
+        'additional_images' => 'array',
+        'sizes' => 'array',
     ];
 
     /**
@@ -33,90 +59,117 @@ class Product extends Model
     public function prepareGMCData(): array
     {
         return [
+            // ✅ REQUIRED: Merchant unique product ID
             'offerId' => $this->sku ?: (string) $this->id,
-            'title' => $this->name,
+
+            // ✅ REQUIRED: Product title (max 150 chars recommended)
+            'title' => $this->title,
+
+            // ✅ REQUIRED: Product description (max 5000 chars)
             'description' => $this->description,
-            'link' => url("/products/{$this->id}"),
-            'imageLink' => $this->getMainImage(),
-            'additionalImageLinks' => array_slice($this->prepareImages(), 1, 9), // Max 10 additional images
+
+            // ✅ REQUIRED: Link to your product landing page
+            'link' => url("/product/{$this->url_key}"),
+
+            // ✅ REQUIRED: Main product image
+            'imageLink' => 'main image link',
+
+            // ℹ️ OPTIONAL: Up to 10 additional product images
+            'additionalImageLinks' => [], // Array of image links
+
+            // ✅ REQUIRED: Price object
             'price' => [
                 'value' => (string) $this->price,
-                'currency' => 'USD'
+                'currency' => 'INR',
             ],
-            'availability' => $this->stock > 0 ? 'in stock' : 'out of stock',
-            'brand' => $this->brand,
+
+            // ✅ REQUIRED: Product availability ("in stock", "out of stock", "preorder")
+            'availability' => $this->quantity > 0 ? 'in stock' : 'out of stock',
+
+            // ✅ REQUIRED: Condition of the product ("new", "refurbished", "used")
             'condition' => 'new',
+
+            // ✅ REQUIRED: Content language (ISO 639-1 code)
+            'contentLanguage' => 'en',
+
+            // ✅ REQUIRED: Target country (ISO 3166 country code)
+            'targetCountry' => 'IN',
+
+            // ✅ REQUIRED: Sales channel ("online" or "local")
+            'channel' => 'online',
+
+            // ✅ REQUIRED if GTIN exists: Global Trade Item Number
             'gtin' => $this->gtin ?? null,
-            'mpn' => $this->sku, // Manufacturer Part Number
-            'googleProductCategory' => $this->getGoogleProductCategory(),
-            'productType' => $this->category ?? 'General',
+
+            // ℹ️ OPTIONAL but recommended if no GTIN: Manufacturer Part Number
+            'mpn' => $this->mpn,
+
+            // ℹ️ OPTIONAL: Brand name (required for non-apparel in many countries)
+            'brand' => $this->brand ?? 'Your Brand Name',
+
+            // ℹ️ OPTIONAL: Google-defined product category (numeric ID preferred, string accepted)
+            // Example numeric ID: "Apparel & Accessories > Clothing" = 1604
+            'googleProductCategory' => 'product category name',
+
+            // ℹ️ OPTIONAL: Your own categorization
+            'productTypes' => [], // Array of product types
+
+            // ℹ️ OPTIONAL: Sale price if product is discounted
+            'salePrice' => ['value' => '0', 'currency' => 'INR'],
+
+            // ℹ️ OPTIONAL: Effective sale period
+            'salePriceEffectiveDate' => 'sale price effective date',
+
+            // ℹ️ OPTIONAL: Shipping weight
+            'shippingWeight' => $this->weight
+                ? ['value' => (string) $this->weight, 'unit' => 'kg']
+                : null,
+
+            // ℹ️ OPTIONAL: Product dimensions
+            'shippingLength' => $this->length
+                ? ['value' => (string) $this->length, 'unit' => 'cm']
+                : null,
+            'shippingWidth' => $this->width
+                ? ['value' => (string) $this->width, 'unit' => 'cm']
+                : null,
+            'shippingHeight' => $this->height
+                ? ['value' => (string) $this->height, 'unit' => 'cm']
+                : null,
+
+            // ℹ️ OPTIONAL: Shipping cost (if you want to override GMC settings)
+            // Example: Free shipping in India
+            'shipping' => [[
+                'country' => 'IN',
+                'service' => 'Standard',
+                'price' => ['value' => '0', 'currency' => 'INR']
+            ]],
+
+            // ℹ️ OPTIONAL: Age group ("newborn", "infant", "toddler", "kids", "adult")
+            'ageGroup' => 'adult',
+
+            // ℹ️ OPTIONAL: Gender ("male", "female", "unisex")
+            'gender' => 'unisex',
+
+            // ℹ️ OPTIONAL: Color, Size (important for apparel)
+            'color' => $this->color ?? null,
+            'sizes' => $this->sizes ?? null,
+
+            // ℹ️ OPTIONAL: Material, Pattern
+            'material' => $this->material ?? null,
+            'pattern' => $this->pattern ?? null,
+
+            // ℹ️ OPTIONAL: Item group ID (for product variants like color/size)
+            'itemGroupId' => $this->parent_sku ?? null,
+
+            // ℹ️ OPTIONAL: Energy efficiency label (electronics, appliances)
+            'energyEfficiencyClass' => null,
+
+            // ℹ️ OPTIONAL: Multipack (if product is sold in packs >1)
+            'multipack' => $this->pack_size ?? null,
+
+            // ℹ️ OPTIONAL: Bundle flag (true if product is a bundle)
+            'isBundle' => $this->is_bundle ?? false,
         ];
     }
 
-    /**
-     * Get all product images as array
-     */
-    public function prepareImages(): array
-    {
-        $images = [];
-        
-        if ($this->image_url) {
-            $mainImage = str_starts_with($this->image_url, 'http') 
-                ? $this->image_url 
-                : url($this->image_url);
-            
-            $images[] = $mainImage;
-        } else {
-            $images[] = 'https://via.placeholder.com/300x300.png?text=No+Image';
-        }
-        
-        // Add additional images if available
-        if (method_exists($this, 'getAdditionalImages')) {
-            $additionalImages = $this->getAdditionalImages();
-            if (is_array($additionalImages)) {
-                $images = array_merge($images, $additionalImages);
-            }
-        }
-        
-        return $images;
-    }
-    
-    /**
-     * Get the main product image URL for GMC
-     */
-    public function getMainImage(): string
-    {
-        $images = $this->prepareImages();
-        return $images[0] ?? 'https://via.placeholder.com/300x300.png?text=No+Image';
-    }
-
-    /**
-     * Get Google Product Category (you should map your categories to Google's taxonomy)
-     */
-    public function getGoogleProductCategory(): ?string
-    {
-        // Example mapping - customize based on your categories
-        $categoryMapping = [
-            'electronics' => 'Electronics',
-            'clothing' => 'Apparel & Accessories',
-            'books' => 'Media > Books',
-            // Add more mappings as needed
-        ];
-
-        return $categoryMapping[$this->category] ?? null;
-    }
-
-    /**
-     * Example of additional images method (customize as needed)
-     */
-    public function getAdditionalImages(): array
-    {
-        // If you have a separate images table/relationship
-        // return $this->images->pluck('url')->toArray();
-        
-        // Or if stored as JSON
-        // return json_decode($this->additional_images, true) ?? [];
-        
-        return [];
-    }
 }

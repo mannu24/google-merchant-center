@@ -27,7 +27,7 @@ class GMCRepository implements GMCRepositoryInterface
     {
         try {
             $client = new Client();
-            $filePath = config('gmc.service_account_json');
+            $filePath = base_path(config('gmc.service_account_json'));
             
             Log::info('Attempting to load GMC service account file', [
                 'file_path' => $filePath,
