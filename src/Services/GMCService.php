@@ -5,6 +5,7 @@ namespace Mannu24\GMCIntegration\Services;
 use Mannu24\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Config;
 
 class GMCService
 {
@@ -34,7 +35,12 @@ class GMCService
                 'model_id' => $model->getKey(),
                 'error' => $e->getMessage()
             ]);
-            throw $e;
+            
+            if ($this->shouldThrowExceptions()) {
+                throw $e;
+            }
+            
+            return false;
         }
     }
 
@@ -57,6 +63,11 @@ class GMCService
                         'model_id' => $model->getKey(),
                         'error' => $e->getMessage()
                     ];
+                    
+                    // If exceptions should be thrown, throw the first one
+                    if ($this->shouldThrowExceptions()) {
+                        throw $e;
+                    }
                 }
             }
             
@@ -64,6 +75,12 @@ class GMCService
                 usleep(100000);
             }
         });
+
+        // If we have errors and exceptions should be thrown, throw the first error
+        if (!empty($errors) && $this->shouldThrowExceptions()) {
+            $firstError = $errors[0];
+            throw new \Exception("GMC sync failed for product {$firstError['model_id']}: {$firstError['error']}");
+        }
 
         return [
             'successes' => count($results),
@@ -95,7 +112,12 @@ class GMCService
                 'product_id' => $productId,
                 'error' => $e->getMessage()
             ]);
-            throw $e;
+            
+            if ($this->shouldThrowExceptions()) {
+                throw $e;
+            }
+            
+            return false;
         }
     }
 
@@ -108,7 +130,12 @@ class GMCService
                 'product_id' => $productId,
                 'error' => $e->getMessage()
             ]);
-            throw $e;
+            
+            if ($this->shouldThrowExceptions()) {
+                throw $e;
+            }
+            
+            return false;
         }
     }
 
@@ -160,6 +187,11 @@ class GMCService
         }
 
         return true;
+    }
+
+    protected function shouldThrowExceptions(): bool
+    {
+        return Config::get('gmc.throw_sync_exceptions', true);
     }
 
     public function setBatchSize(int $batchSize): self

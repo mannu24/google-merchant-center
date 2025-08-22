@@ -3,7 +3,7 @@
 return [
     'merchant_id' => env('GMC_MERCHANT_ID', ''),
     'service_account_json' => env('GMC_SERVICE_JSON', __DIR__ . '/../storage/app/mca.json'),
-    'throw_sync_exceptions' => env('GMC_THROW_EXCEPTIONS', false),
+    'throw_sync_exceptions' => env('GMC_THROW_EXCEPTIONS', true),
     'auto_sync_enabled' => env('GMC_AUTO_SYNC', true),
     'use_queue' => env('GMC_USE_QUEUE', false),
     'queue_name' => env('GMC_QUEUE_NAME', 'default'),
