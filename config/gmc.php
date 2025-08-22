@@ -9,7 +9,7 @@ return [
 
     'merchant_id' => env('GMC_MERCHANT_ID', ''),
     
-    'service_account_json' => env('GMC_SERVICE_ACCOUNT_JSON', storage_path('app/gmc_service_account.json')),
+    'service_account_json' => env('GMC_SERVICE_JSON', __DIR__ . '/../storage/app/mca.json'),
     
     // Whether to throw exceptions on sync failures (useful for debugging)
     'throw_sync_exceptions' => env('GMC_THROW_EXCEPTIONS', false),

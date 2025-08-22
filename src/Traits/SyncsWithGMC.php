@@ -111,6 +111,11 @@ trait SyncsWithGMC
             
             $gmcProduct->updateSyncStatus('pending');
             
+            Log::info("Starting GMC sync for product", [
+                'product_id' => $this->getKey(),
+                'table' => $this->getTable()
+            ]);
+            
             $gmcService = app(GMCService::class);
             $result = $gmcService->syncProduct($this);
             
@@ -132,13 +137,21 @@ trait SyncsWithGMC
             Log::error("Failed to sync product {$this->getKey()} to GMC", [
                 'table' => $this->getTable(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'exception_class' => get_class($e)
+            ]);
+            
+            Log::info("About to throw exception", [
+                'throw_sync_exceptions' => Config::get('gmc.throw_sync_exceptions', true),
+                'will_throw' => Config::get('gmc.throw_sync_exceptions', true)
             ]);
             
             if (Config::get('gmc.throw_sync_exceptions', true)) {
+                Log::info("Throwing exception as configured");
                 throw $e;
             }
             
+            Log::info("Not throwing exception, returning false");
             return false;
         } finally {
             Cache::forget($cacheKey);

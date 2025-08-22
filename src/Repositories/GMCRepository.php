@@ -27,7 +27,20 @@ class GMCRepository implements GMCRepositoryInterface
     {
         try {
             $client = new Client();
-            $client->setAuthConfig(config('gmc.service_account_json'));
+            $filePath = config('gmc.service_account_json');
+            
+            Log::info('Attempting to load GMC service account file', [
+                'file_path' => $filePath,
+                'file_exists' => file_exists($filePath),
+                'current_dir' => __DIR__,
+                'config_value' => config('gmc.service_account_json')
+            ]);
+            
+            if (!file_exists($filePath)) {
+                throw new \InvalidArgumentException("Service account file not found: {$filePath}");
+            }
+            
+            $client->setAuthConfig($filePath);
             $client->addScope(ShoppingContent::CONTENT);
 
             $this->service = new ShoppingContent($client);
@@ -38,7 +51,9 @@ class GMCRepository implements GMCRepositoryInterface
             }
         } catch (\Exception $e) {
             Log::error('Failed to initialize Google API client', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'file_path' => config('gmc.service_account_json'),
+                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }

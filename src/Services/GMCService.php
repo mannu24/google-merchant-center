@@ -6,6 +6,7 @@ use Mannu24\GMCIntegration\Repositories\Interfaces\GMCRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 
 class GMCService
 {
@@ -31,7 +32,7 @@ class GMCService
             return false;
         }
         
-        Cache::put($cacheKey, true, now()->addMinutes(2));
+        Cache::put($cacheKey, true, Carbon::now()->addMinutes(2));
         
         try {
             $gmcData = $this->prepareProductData($model);
@@ -65,6 +66,8 @@ class GMCService
                 'table' => $model->getTable(),
                 'error' => $e->getMessage()
             ]);
+            
+            // Always throw exceptions for debugging
             throw $e;
         } finally {
             Cache::forget($cacheKey);
